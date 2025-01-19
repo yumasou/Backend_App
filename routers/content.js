@@ -1,6 +1,7 @@
 import express  from "express";
 import { prisma } from "../prismaClient.js";
 const router = express.Router();
+import { auth } from "../middlewares/auth.js";
 import {findCommentbycommentId, findCommentByPostId,findPostbypostId,findPostbyUserId} from "../Query/BasicQuery.js"
 router.get("/posts", async (req, res) => {
   try {
@@ -54,7 +55,7 @@ router.post('/posts',async(req,res)=>{
         res.status(200).json(data)
     } catch (e){console.log(e)}
 })
-router.delete('/posts/:id',async(req,res)=>{
+router.delete('/posts/:id',auth, async(req,res)=>{
     const id=Number(req.params.id)
     try{
         const comment=await findCommentByPostId(id)

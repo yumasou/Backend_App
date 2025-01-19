@@ -12,7 +12,10 @@ app.use(cors());
 app.get("/info", (req, res) => {
   res.json({ msg: "my_backend_api" });
 });
-
+/***
+ * @param {router from user }userRouter
+ * @param {router from content} postRouter
+ */
 app.use("/", userRouter);
 app.use('/content',postRouter)
 const server = app.listen(5000, () => {

@@ -1,15 +1,13 @@
 import { Router } from "express";
 import { prisma } from "../prismaClient.js";
 import bcrypt from "bcrypt";
-import  JWT  from "jsonwebtoken";
+import JWT from "jsonwebtoken";
 const router = Router();
 import {
   findCommentByuserId,
   findPostbyUserId,
   findUserbyuserId,
 } from "../Query/BasicQuery.js";
-
-
 
 router.get("/users", async (req, res) => {
   const limit = Number(req.query.limit) || 20;
@@ -22,8 +20,12 @@ router.get("/users", async (req, res) => {
   });
   res.status(200).json(users);
 });
+
 router.get("/users/:id", async (req, res) => {
   const id = Number(req.params.id);
+  if (!id) {
+    return res.sendStatus(400);
+  }
   const data = await prisma.user.findFirst({
     where: {
       id: id,
@@ -35,8 +37,6 @@ router.get("/users/:id", async (req, res) => {
   });
   res.status(200).json(data);
 });
-
-
 
 router.post("/users", async (req, res) => {
   const { name, username, email, bio, password } = req.body;
@@ -60,11 +60,11 @@ router.post("/users", async (req, res) => {
   }
 });
 
-
-
-
 router.delete("/users/:id", async (req, res) => {
   const id = Number(req.params.id);
+  if (!id) {
+    return res.sendStatus(400);
+  }
   try {
     const comment = await findCommentByuserId(id);
 
@@ -101,10 +101,10 @@ router.delete("/users/:id", async (req, res) => {
  */
 router.post("/login", async (req, res) => {
   const { username, password } = req.body;
-  console.log(typeof username, typeof password);
+
   try {
     if (!username || !password) {
-      res.set(200).json("Incorrect username or password");
+      res.status(400).json("Incorrect username or password");
     }
     const user = await prisma.user.findUnique({
       where: { username: username },
@@ -115,8 +115,8 @@ router.post("/login", async (req, res) => {
     if (user) {
       const isMatch = await bcrypt.compare(password, user.password);
       if (isMatch) {
-        const token=JWT.sign(user,process.env.JWT_SECRECT)
-        res.set(200).json({token,user:{...user,password:null}});
+        const token = JWT.sign(user, process.env.JWT_SECRECT);
+        res.status(200).json({ token, user: { ...user, password: null } });
       }
     }
     res.sendStatus(404);
@@ -124,6 +124,5 @@ router.post("/login", async (req, res) => {
     console.log(e);
   }
 });
-
 
 export { router as userRouter };

@@ -1,8 +1,10 @@
 import { Router } from "express";
 import { prisma } from "../prismaClient.js";
 import bcrypt from "bcrypt";
+import { auth } from "../middlewares/auth.js";
 import JWT from "jsonwebtoken";
 const router = Router();
+
 import {
   findCommentByuserId,
   findPostbyUserId,
@@ -18,7 +20,7 @@ router.get("/users", async (req, res) => {
     take: limit,
     skip: skip,
   });
-  res.status(200).json(users);
+  return res.status(200).json(users);
 });
 
 router.get("/users/:id", async (req, res) => {
@@ -33,9 +35,18 @@ router.get("/users/:id", async (req, res) => {
     include: {
       posts: true,
       comments: true,
+      followers:true,
+      followings:true,
+      _count:{
+        select:{
+          posts:true,
+          followers:true,
+          followings:true
+        }
+      }
     },
   });
-  res.status(200).json(data);
+  return res.status(200).json(data);
 });
 
 router.post("/users", async (req, res) => {
@@ -54,13 +65,13 @@ router.post("/users", async (req, res) => {
         password: hashedPassword,
       },
     });
-    res.status(200).json(data);
+    return res.status(200).json(data);
   } catch (e) {
     console.log(e);
   }
 });
 
-router.delete("/users/:id", async (req, res) => {
+router.delete("/users/:id",auth, async (req, res) => {
   const id = Number(req.params.id);
   if (!id) {
     return res.sendStatus(400);
@@ -89,7 +100,7 @@ router.delete("/users/:id", async (req, res) => {
       return res.sendStatus(204);
     }
 
-    res.sendStatus(400);
+    return res.sendStatus(400);
   } catch (e) {
     console.log(e);
   }
@@ -104,7 +115,7 @@ router.post("/login", async (req, res) => {
 
   try {
     if (!username || !password) {
-      res.status(400).json("Incorrect username or password");
+      return res.status(400).json("Incorrect username or password");
     }
     const user = await prisma.user.findUnique({
       where: { username: username },
@@ -116,10 +127,12 @@ router.post("/login", async (req, res) => {
       const isMatch = await bcrypt.compare(password, user.password);
       if (isMatch) {
         const token = JWT.sign(user, process.env.JWT_SECRECT);
-        res.status(200).json({ token, user: { ...user, password: null } });
+        return res
+          .status(200)
+          .json({ token, user: { ...user, password: null } });
       }
     }
-    res.sendStatus(404);
+    return res.sendStatus(404);
   } catch (e) {
     console.log(e);
   }

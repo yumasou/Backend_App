@@ -11,41 +11,79 @@ datasource db {
 }
 
 model User {
-  id Int @id @default(autoincrement())
-  name String
-  username String @unique
-  email String @unique
-  bio String?
-  role Role @default(BASIC)
-  password String
-  posts Post[] 
-  comments Comment[]
-  createAt DateTime @default(now())
-  updateAt DateTime @updatedAt
+  id           Int           @id @default(autoincrement())
+  name         String
+  username     String        @unique
+  email        String        @unique
+  bio          String?
+  role         Role          @default(BASIC)
+  password     String
+  posts        Post[]
+  comments     Comment[]
+  postLikes    Postlike[]
+  commentLikes Commentlike[]
+  followers    Follow[]      @relation("follower")
+  followings   Follow[]      @relation("following")
+  createAt     DateTime      @default(now())
+  updateAt     DateTime      @updatedAt
 }
 
 model Post {
-  id Int @id @default(autoincrement())
-  content String
-  comments Comment[]
-  user User @relation(fields: [userId],references: [id],onDelete: Cascade) 
-  userId Int
+  id        Int        @id @default(autoincrement())
+  content   String
+  comments  Comment[]
+  PostLikes Postlike[]
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    Int
+  createAt  DateTime   @default(now())
+  updateAt  DateTime   @updatedAt
+}
+
+model Comment {
+  id           Int           @id @default(autoincrement())
+  content      String
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId       Int
+  post         Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId       Int
+  commentLikes Commentlike[]
+  createAt     DateTime      @default(now())
+  updateAt     DateTime      @updatedAt
+}
+
+model Postlike {
+  id       Int      @id @default(autoincrement())
+  post     Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId   Int
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId   Int
   createAt DateTime @default(now())
   updateAt DateTime @updatedAt
 }
 
-model Comment{
-  id Int @id @default(autoincrement())
-  content String
-  user User @relation(fields: [userId],references: [id])
-  userId Int
-  post Post @relation(fields: [postId],references: [id],onDelete: Cascade)
-  postId Int
+model Commentlike {
+  id        Int      @id @default(autoincrement())
+  comment   Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  commentId Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    Int
+  createAt  DateTime @default(now())
+  updateAt  DateTime @updatedAt
+}
+
+model Follow {
+  id           Int  @id @default(autoincrement())
+  following    User @relation("following", fields: [followingInt], references: [id], onDelete: Cascade)
+  followingInt Int
+
+  follower    User @relation("follower", fields: [followerInt], references: [id], onDelete: Cascade)
+  followerInt Int
+
   createAt DateTime @default(now())
   updateAt DateTime @updatedAt
 }
 
-enum Role{
-BASIC
-ADMIN
+enum Role {
+  BASIC
+  ADMIN
 }

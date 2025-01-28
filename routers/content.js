@@ -9,6 +9,44 @@ import {
   findPostbyUserId,
 } from "../Query/BasicQuery.js";
 
+router.get("/likes/posts/:id", async (req, res) => {
+  const id = Number(req.params.id);
+  try {
+    if (!id) {
+      return res.sendStatus(400);
+    }
+    const likes = await prisma.postlike.findMany({
+      where: { postId: id },
+      include: { user: { include: { followers: true, followings: true } } },
+    });
+
+    const count = likes.length;
+
+    res.status(200).json({ likes, count });
+  } catch (e) {
+    console.log(e);
+  }
+});
+
+router.get("/likes/comments/:id", async (req, res) => {
+  const id = Number(req.params.id);
+  try {
+    if (!id) {
+      return res.sendStatus(400);
+    }
+    const likes = await prisma.commentlike.findMany({
+      where: { commentId: id },
+      include: { user: { include: { followers: true, followings: true } } },
+    });
+
+    const count = likes.length;
+
+    res.status(200).json({ likes, count });
+  } catch (e) {
+    console.log(e);
+  }
+});
+
 router.get("/posts", async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 20;
@@ -17,13 +55,14 @@ router.get("/posts", async (req, res) => {
       include: {
         user: true,
         comments: { include: { user: true } },
-        PostLikes:true,
-        _count:{
-          select:{
-            PostLikes:true
-          }
-        }
+        PostLikes: true,
+        _count: {
+          select: {
+            comments: true,
+            PostLikes: true,
+          },
         },
+      },
       orderBy: { id: "desc" },
       take: limit,
       skip: skip,
@@ -46,17 +85,23 @@ router.get("/posts/:id", async (req, res) => {
       where: { id: Number(id) },
       include: {
         user: true,
-        comments: { include: { user: true,commentLikes:true
-          ,_count:{select:{
-            commentLikes:true
-          }}
-         } },
-        PostLikes:true,
-        _count:{
-          select:{
-            PostLikes:true
-          }
-        }
+        comments: {
+          include: {
+            user: true,
+            commentLikes: true,
+            _count: {
+              select: {
+                commentLikes: true,
+              },
+            },
+          },
+        },
+        PostLikes: true,
+        _count: {
+          select: {
+            PostLikes: true,
+          },
+        },
       },
       take: limit,
       skip: skip,
@@ -111,9 +156,9 @@ router.post("/like/comments/:id", auth, async (req, res) => {
   const commentId = Number(req.params.id);
   const userId = Number(res.locals.user.id);
   try {
-      if(!userId || !commentId){
-        return res.sendStatus(400)
-      }
+    if (!userId || !commentId) {
+      return res.sendStatus(400);
+    }
     const commentlike = await prisma.commentlike.create({
       data: { commentId: commentId, userId: userId },
     });
@@ -131,6 +176,7 @@ router.post("/like/posts/:id", auth, async (req, res) => {
   const postId = Number(req.params.id);
   try {
     const userId = Number(res.locals.user.id);
+    console.log(userId, postId);
     if (!userId || !postId) {
       return res.status(401).json({ msg: "user not login" });
     }
@@ -163,8 +209,7 @@ router.delete("/posts/:id", auth, isOwner("post"), async (req, res) => {
         where: { id: id },
       });
       return res.sendStatus(204);
-    }
-   else return res.sendStatus(400);
+    } else return res.sendStatus(400);
   } catch (e) {
     console.log(e);
   }

@@ -12,13 +12,13 @@ import {
 } from "../Query/BasicQuery.js";
 
 router.get("/users", async (req, res) => {
-  const limit = Number(req.query.limit) || 20;
-  const skip = Number(req.query.skip) || 0;
+  // const limit = Number(req.query.limit) || 20;
+  // const skip = Number(req.query.skip) || 0;
   const users = await prisma.user.findMany({
-    include: { posts: true, comments: true },
+    include: { posts: true, comments: true, followers: true, followings: true },
     orderBy: { id: "desc" },
-    take: limit,
-    skip: skip,
+    // take: limit,
+    // skip: skip,
   });
   return res.status(200).json(users);
 });
@@ -33,17 +33,28 @@ router.get("/users/:id", async (req, res) => {
       id: id,
     },
     include: {
-      posts: true,
-      comments: true,
-      followers:true,
-      followings:true,
-      _count:{
-        select:{
-          posts:true,
-          followers:true,
-          followings:true
-        }
-      }
+      posts: {
+        include: {
+          PostLikes: true,
+          user: true,
+          _count: { select: { PostLikes: true } },
+        },
+      },
+      comments: {
+        include: {
+          commentLikes: true,
+          _count: { select: { commentLikes: true } },
+        },
+      },
+      followers: true,
+      followings: true,
+      _count: {
+        select: {
+          posts: true,
+          followers: true,
+          followings: true,
+        },
+      },
     },
   });
   return res.status(200).json(data);
@@ -71,7 +82,7 @@ router.post("/users", async (req, res) => {
   }
 });
 
-router.delete("/users/:id",auth, async (req, res) => {
+router.delete("/users/:id", auth, async (req, res) => {
   const id = Number(req.params.id);
   if (!id) {
     return res.sendStatus(400);
@@ -133,6 +144,44 @@ router.post("/login", async (req, res) => {
       }
     }
     return res.sendStatus(404);
+  } catch (e) {
+    console.log(e);
+  }
+});
+
+router.post("/follow/:id", auth, async (req, res) => {
+  const id = Number(req.params.id);
+  const userid = Number(res.locals.user.id);
+  if (!userid || !id) {
+    return res.sendStatus(400);
+  }
+  try {
+    const result = await prisma.follow.create({
+      data: { followerId: userid, followingId: id },
+    });
+    if (result) {
+      return res.status(200).json(result);
+    }
+  } catch (e) {
+    console.log(e);
+  }
+});
+
+router.delete("/unfollow/:id", auth, async (req, res) => {
+  const id = Number(req.params.id);
+  const userid = Number(res.locals.user.id);
+  if (!userid || !id) {
+    return res.sendStatus(400);
+  }
+  try {
+    const result = await prisma.follow.deleteMany({
+     where:{
+      followingId:id ,followerId:userid
+     }
+    });
+    if (result) {
+      return res.status(200).json(result);
+    }
   } catch (e) {
     console.log(e);
   }

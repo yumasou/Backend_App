@@ -13,7 +13,6 @@ const auth = async (req, res, next) => {
   const token = Authorization && Authorization.split(" ")[1];
   const user = jwt.verify(token, process.env.JWT_SECRECT);
   if (user) {
-    console.log(user)
     res.locals.user = user;
     next();
   }

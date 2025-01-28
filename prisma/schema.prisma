@@ -73,11 +73,11 @@ model Commentlike {
 
 model Follow {
   id           Int  @id @default(autoincrement())
-  following    User @relation("following", fields: [followingInt], references: [id], onDelete: Cascade)
-  followingInt Int
+  following    User @relation("following", fields: [followingId], references: [id], onDelete: Cascade)
+  followingId Int
 
-  follower    User @relation("follower", fields: [followerInt], references: [id], onDelete: Cascade)
-  followerInt Int
+  follower    User @relation("follower", fields: [followerId], references: [id], onDelete: Cascade)
+  followerId Int
 
   createAt DateTime @default(now())
   updateAt DateTime @updatedAt

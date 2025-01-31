@@ -55,11 +55,11 @@ router.get("/posts", async (req, res) => {
       include: {
         user: true,
         comments: { include: { user: true } },
-        PostLikes: true,
+        postLikes: true,
         _count: {
           select: {
             comments: true,
-            PostLikes: true,
+            postLikes: true,
           },
         },
       },
@@ -96,10 +96,10 @@ router.get("/posts/:id", async (req, res) => {
             },
           },
         },
-        PostLikes: true,
+        postLikes: true,
         _count: {
           select: {
-            PostLikes: true,
+            postLikes: true,
           },
         },
       },

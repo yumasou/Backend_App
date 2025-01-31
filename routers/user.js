@@ -35,9 +35,9 @@ router.get("/users/:id", async (req, res) => {
     include: {
       posts: {
         include: {
-          PostLikes: true,
+          postLikes: true,
           user: true,
-          _count: { select: { PostLikes: true } },
+          _count: { select: { postLikes: true } },
         },
       },
       comments: {

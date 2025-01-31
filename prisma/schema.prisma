@@ -32,7 +32,7 @@ model Post {
   id        Int        @id @default(autoincrement())
   content   String
   comments  Comment[]
-  PostLikes Postlike[]
+  postLikes Postlike[]
   user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId    Int
   createAt  DateTime   @default(now())

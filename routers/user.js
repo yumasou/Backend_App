@@ -22,6 +22,38 @@ router.get("/users", async (req, res) => {
   });
   return res.status(200).json(users);
 });
+router.get("/followers/:id", async (req, res) => {
+  const id = Number(req.params.id);
+  try {
+    const followers = await prisma.follow.findMany({
+      where: { followingId: id },
+      include: { follower: { include: { followings: true, followers: true } } },
+    });
+    if (followers) {
+      res.status(200).json(followers);
+    } else {
+      res.sendStatus(400);
+    }
+  } catch (e) {
+    console.log(e);
+  }
+});
+router.get("/followings/:id", async (req, res) => {
+  const id = Number(req.params.id);
+  try {
+    const followings = await prisma.follow.findMany({
+      where: { followerId: id },
+      include: { following: { include: { followers: true, followings: true } } },
+    });
+    if (followings) {
+      res.status(200).json(followings);
+    } else {
+      res.sendStatus(400);
+    }
+  } catch (e) {
+    console.log(e);
+  }
+});
 
 router.get("/users/:id", async (req, res) => {
   const id = Number(req.params.id);
@@ -46,8 +78,8 @@ router.get("/users/:id", async (req, res) => {
           _count: { select: { commentLikes: true } },
         },
       },
-      followers: true,
-      followings: true,
+      followers: { include: { following: true } },
+      followings: { include: { follower: true } },
       _count: {
         select: {
           posts: true,
@@ -175,9 +207,10 @@ router.delete("/unfollow/:id", auth, async (req, res) => {
   }
   try {
     const result = await prisma.follow.deleteMany({
-     where:{
-      followingId:id ,followerId:userid
-     }
+      where: {
+        followingId: id,
+        followerId: userid,
+      },
     });
     if (result) {
       return res.status(200).json(result);

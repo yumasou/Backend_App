@@ -9,6 +9,47 @@ import {
   findPostbyUserId,
 } from "../Query/BasicQuery.js";
 
+router.get("/followingposts", auth, async (req, res) => {
+  const id = Number(res.locals.user.id);
+  if (!id) res.sendStatus(401);
+  try {
+    const follower = await prisma.follow.findMany({
+      where: {
+        followerId: id,
+      },
+    });
+    if (follower) {
+      const users = follower.map((m) => {
+        return m.followingId;
+      });
+      if (users) {
+        const posts = await prisma.post.findMany({
+          where: {
+            userId: { in: users },
+          },
+          include: {
+            user: true,
+            comments: { include: { user: true } },
+            postLikes: true,
+            _count: {
+              select: {
+                comments: true,
+                postLikes: true,
+              },
+            },
+          },
+          orderBy: { id: "desc" },
+        });
+        return res.status(200).json(posts);
+      }
+    } else {
+      return res.status(400).json({ msg: "User don't have following" });
+    }
+  } catch (e) {
+    console.log(e);
+  }
+});
+
 router.get("/likes/posts/:id", async (req, res) => {
   const id = Number(req.params.id);
   try {
@@ -176,7 +217,6 @@ router.post("/like/posts/:id", auth, async (req, res) => {
   const postId = Number(req.params.id);
   try {
     const userId = Number(res.locals.user.id);
-    console.log(userId, postId);
     if (!userId || !postId) {
       return res.status(401).json({ msg: "user not login" });
     }

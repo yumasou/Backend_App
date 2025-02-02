@@ -22,6 +22,27 @@ router.get("/users", async (req, res) => {
   });
   return res.status(200).json(users);
 });
+
+router.get("/search", async (req, res) => {
+  const { q } = req.query;
+  try {
+    const users = await prisma.user.findMany({
+      where: { name: { contains: q } },
+      include: {
+        followers: true,
+        followings: true,
+      },
+    });
+    if (users) {
+      res.status(200).json(users);
+    } else {
+      res.sendStatus(400);
+    }
+  } catch (e) {
+    console.log(e);
+  }
+});
+
 router.get("/followers/:id", async (req, res) => {
   const id = Number(req.params.id);
   try {
@@ -43,7 +64,9 @@ router.get("/followings/:id", async (req, res) => {
   try {
     const followings = await prisma.follow.findMany({
       where: { followerId: id },
-      include: { following: { include: { followers: true, followings: true } } },
+      include: {
+        following: { include: { followers: true, followings: true } },
+      },
     });
     if (followings) {
       res.status(200).json(followings);

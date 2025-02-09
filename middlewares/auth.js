@@ -63,11 +63,12 @@ const isOwner = (type) => {
 
       if (type === "postLike") {
         const id = Number(req.params.id);
-        const like = await prisma.postlike.findFirst({
+        const like = await prisma.postlike.findMany({
           where: { postId: id },
         });
         if (like) {
-          if (like.userId === res.locals.user.id) {
+          
+          if (like.find(m=>m.userId===res.locals.user.id)) {
             return next();
           }
         }
@@ -76,11 +77,11 @@ const isOwner = (type) => {
 
       if (type === "commentLike") {
         const id = Number(req.params.id);
-        const commentlike = await prisma.commentlike.findFirst({
+        const commentlike = await prisma.commentlike.findMany({
           where: { commentId: id },
         });
         if (commentlike) {
-          if (commentlike.userId === res.locals.user.id) {
+          if (commentlike.find(m=>m.userId === res.locals.user.id)) {
             return next();
           }
         }

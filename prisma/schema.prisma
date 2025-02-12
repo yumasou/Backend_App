@@ -27,8 +27,11 @@ model User {
   commentLikes Commentlike[]
   notis        Noti[]
 
-  followers  Follow[] @relation("follower")
-  followings Follow[] @relation("following")
+  followers  Follow[]  @relation("follower")
+  followings Follow[]  @relation("following")
+  senders    Massage[] 
+  
+  chats Chat[] @relation("ChatUsers")
 
   createAt DateTime @default(now())
   updateAt DateTime @updatedAt
@@ -97,16 +100,35 @@ model Noti {
   type    String
   content String
 
-  user   User @relation(fields: [userId], references: [id],onDelete: Cascade)
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId Int
 
-  post   Post @relation(fields: [postId], references: [id],onDelete: Cascade)
+  post   Post @relation(fields: [postId], references: [id], onDelete: Cascade)
   postId Int
 
   read Boolean @default(false)
 
   createAt DateTime @default(now())
   updateAt DateTime @updatedAt
+}
+
+model Chat {
+  id       Int       @id @default(autoincrement())
+  users    User[]    @relation("ChatUsers")
+  massages Massage[]
+  createAt DateTime  @default(now())
+  updateAt DateTime  @updatedAt
+}
+
+model Massage {
+  id         Int      @id @default(autoincrement())
+  content    String
+  sender     User     @relation( fields: [senderId], references: [id])
+  senderId   Int
+  chat       Chat     @relation(fields: [chatId], references: [id])
+  chatId     Int
+  createAt   DateTime @default(now())
+  updateAt   DateTime @updatedAt
 }
 
 enum Role {

@@ -20,7 +20,8 @@ export const clients = [];
 io.on("connection",socket=>{
   console.log(`user connected : ${socket.id}`)
   socket.on("token",token=>{
-    console.log(`token value ${token}`)
+    // console.log(`token value ${token}`)
+    if(!token)return false
     jwt.verify(token,secrect,(err,user)=>{
       if(err) return false
       if(clients.find(m=>m.user.id===user.id)) return false

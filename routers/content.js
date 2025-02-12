@@ -16,7 +16,6 @@ async function addNoti({ type, content, userId, postId }) {
   }
   const post = await prisma.post.findUnique({ where: { id: postId } });
   if (post.userId === userId) return false;
-  // console.log(clients)
   clients.map((m) => {
     if (m.user.id === post.userId && m.socket.connected) {
       m.socket.emit("Noti", `Someone ${content}`);
@@ -215,7 +214,7 @@ router.put("/noti/read", auth, async (req, res) => {
 router.put("/noti/read/:id", auth, async (req, res) => {
   const id = Number(req.params.id);
   const userId = Number(res.locals.user.id);
- 
+
   try {
     const makeRead = await prisma.noti.updateMany({
       data: { read: true },

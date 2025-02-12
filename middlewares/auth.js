@@ -15,8 +15,7 @@ const auth = async (req, res, next) => {
   if (user) {
     res.locals.user = user;
     next();
-  }
-  else return res.sendStatus(401);
+  } else return res.sendStatus(401);
 };
 
 const isOwner = (type) => {
@@ -24,13 +23,13 @@ const isOwner = (type) => {
     try {
       if (type === "post") {
         const id = Number(req.params.id);
-        console.log(id);
+        // console.log(id);
         const post = await prisma.post.findFirst({
           where: {
             id: id,
           },
         });
-        console.log(res.locals.user);
+        // console.log(res.locals.user);
         if (post) {
           if (post.userId === res.locals.user.id) {
             next();
@@ -67,12 +66,10 @@ const isOwner = (type) => {
           where: { postId: id },
         });
         if (like) {
-          
-          if (like.find(m=>m.userId===res.locals.user.id)) {
+          if (like.find((m) => m.userId === res.locals.user.id)) {
             return next();
           }
-        }
-       else return res.sendStatus(403);
+        } else return res.sendStatus(403);
       }
 
       if (type === "commentLike") {
@@ -81,11 +78,10 @@ const isOwner = (type) => {
           where: { commentId: id },
         });
         if (commentlike) {
-          if (commentlike.find(m=>m.userId === res.locals.user.id)) {
+          if (commentlike.find((m) => m.userId === res.locals.user.id)) {
             return next();
           }
-        }
-       else return res.sendStatus(403);
+        } else return res.sendStatus(403);
       }
     } catch (e) {
       next(e);
@@ -93,4 +89,23 @@ const isOwner = (type) => {
   };
 };
 
-export { auth, isOwner };
+const isChatMember=async(req,res,next)=>{
+  const chatId=Number(req.params.chatId)
+  const userId=res.locals.user.id
+  try{
+    const chat=await prisma.chat.findFirst({where:{id:chatId,users:{some:{id:userId}}}})
+    if(chat){
+      next()
+    } else return res.sendStatus(401)
+  }catch (e){console.log(e)}
+}
+
+const isFollower = async (req, res, next) => {
+  const userId = res.locals.user.id;
+  const userIds=req.body
+  const follower = await prisma.follow.findMany({
+    where: { followerId:userId,followingId:userIds} ,
+  });
+};
+
+export { auth, isOwner,isChatMember };

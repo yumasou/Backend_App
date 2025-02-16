@@ -1,8 +1,9 @@
 import { Router } from "express";
 import { prisma } from "../prismaClient.js";
 import bcrypt from "bcrypt";
-import { auth,isChatMember } from "../middlewares/auth.js";
+import { auth, isChatMember } from "../middlewares/auth.js";
 import JWT from "jsonwebtoken";
+import { clients } from "../index.js";
 const router = Router();
 
 import {
@@ -10,6 +11,19 @@ import {
   findPostbyUserId,
   findUserbyuserId,
 } from "../Query/BasicQuery.js";
+
+const messageNoti=async({chatId,sender,message})=>{
+  try{
+    const chat=await prisma.chat.findUnique({where:{id:chatId},include:{users:true}})
+    const [receiver]=chat.users.filter(m=>m.id!==sender.id)
+    clients.map(m=>{
+      if(m.user.id===receiver.id && m.socket.connected){
+        m.socket.emit("newMessage",{sender,message})
+      }
+    })
+  }catch(e){console.log(e)}
+  
+}
 
 router.get("/users", async (req, res) => {
   // const limit = Number(req.query.limit) || 20;
@@ -247,47 +261,102 @@ router.delete("/unfollow/:id", auth, async (req, res) => {
  * create Chat
  */
 
-router.post("/chat/create",auth,async(req,res)=>{
-  const userIds=req.body.userIds
-  const userId=res.locals.user.id
-  if(!userIds)return res.sendStatus(400)
-  try{
-    const chat=await prisma.chat.create({
-      data:{
-        users:{connect:[...userIds.map(id=>({id})),{id:userId}]}
-      },include:{users:true}
-    })
-    if(chat){
-      return res.status(200).json(chat)
+router.post("/chat/create", auth, async (req, res) => {
+  const userId = res.locals.user.id;
+  const otheruser = req.body.userIds;
+  if (otheruser.find((m) => m === userId)) return res.sendStatus(400);
+  const userIds = [...otheruser, userId];
+  if (!userIds) return res.sendStatus(400);
+  try {
+    if (userIds.length === 2) {
+      const existingChat = await prisma.chat.findFirst({
+        where: { AND: userIds.map((id) => ({ users: { some: { id: id } } })) },
+      });
+      if (existingChat) return res.status(200).json(existingChat);
     }
-  }catch (e){console.log(e)}
-})
-
-router.post("/chat/massage",auth,isChatMember,async(req,res)=>{
-  const chatId=Number(req.body.chatId)
-  const content=String(req.body.content.trim())
-  const senderId=res.locals.user.id
-  if(!chatId && !senderId && !content) return res.sendStatus(400)
-    try{
-      const massage=await prisma.massage.create({data:{
-        chatId,senderId,content
-      }})
-      if(massage){
-        return res.status(200).json(massage)
-      }
-    }catch (e){console.log(e)}
-})
-
-router.get("/:chatId/massages",auth,isChatMember,async(req,res)=>{
-const chatId=Number(req.params.chatId)
-try{
-  const massages= await prisma.massage.findMany({
-    where:{chatId:chatId},orderBy:{createAt:"asc"}
-  })
-  if(massages){
-    return res.status(200).json(massages)
+    const chat = await prisma.chat.create({
+      data: {
+        users: { connect: [...userIds.map((id) => ({ id })), { id: userId }] },
+      },
+      include: { users: true },
+    });
+    if (chat) {
+      return res.status(200).json(chat);
+    }
+  } catch (e) {
+    console.log(e);
   }
-}catch (e){console.log(e)}
-})
+});
+
+router.post("/:chatId/massage", auth, isChatMember, async (req, res) => {
+  const chatId = Number(req.params.chatId);
+  const content = req.body.content;
+  const senderId = res.locals.user.id;
+  if (!chatId && !senderId && !content) return res.sendStatus(400);
+  try {
+    const message = await prisma.massage.create({
+      data: {
+        chatId,
+        senderId,
+        content,
+      },
+    });
+    if (message) {
+      await messageNoti({chatId,sender:res.locals.user,message})
+      return res.status(200).json(message);
+    }
+  } catch (e) {
+    console.log(e);
+  }
+});
+
+router.get("/chats", auth, async (req, res) => {
+  try {
+    const userId = res.locals.user.id;
+    const chats = await prisma.chat.findMany({
+      where: { users: { some: { id: userId } } },
+      include: { users: true },
+    });
+    if (chats) return res.status(200).json(chats);
+  } catch (e) {
+    console.log(e);
+  }
+});
+
+router.get("/:chatId/massages", auth, isChatMember, async (req, res) => {
+  const chatId = Number(req.params.chatId);
+  const limit = Number(req.query.limit) || 30;
+  const skip = Number(req.query.skip) || 0;
+  try {
+    const massages = await prisma.massage.findMany({
+      where: { chatId: chatId },
+      orderBy: { createAt: "desc" },
+      take: limit,
+      skip: skip,
+    });
+    if (massages) {
+      return res.status(200).json(massages);
+    }
+  } catch (e) {
+    console.log(e);
+  }
+});
+
+router.put("/chat/:id",auth, async (req, res) => {
+  const chatId = Number(req.params.id);
+  const readId = Number(req.body.readId);
+  if (!chatId || !readId) return res.sendStatus(400);
+  try {
+    const makeRead = await prisma.chat.update({
+      data: { lastReadMessageId: readId },
+      where: { id: chatId },
+    });
+    if(makeRead){
+      return res.status(200).json(makeRead)
+    }
+  } catch (e) {
+    console.log(e);
+  }
+});
 
 export { router as userRouter };

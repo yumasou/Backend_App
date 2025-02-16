@@ -5,8 +5,8 @@ import cors from "cors";
 import { prisma } from "./prismaClient.js";
 import { userRouter } from "./routers/user.js";
 import { postRouter } from "./routers/content.js";
-import jwt from "jsonwebtoken"
-const secrect=process.env.JWT_SECRECT
+import jwt from "jsonwebtoken";
+const secrect = process.env.JWT_SECRECT;
 const app = express();
 const httpServer = http.createServer(app);
 export const io = new Server(httpServer, {
@@ -17,23 +17,42 @@ export const io = new Server(httpServer, {
 });
 export const clients = [];
 
-io.on("connection",socket=>{
-  console.log(`user connected : ${socket.id}`)
-  socket.on("token",token=>{
+io.on("connection", (socket) => {
+  const token = socket.handshake.auth?.token;
+  if (!token) {
+    socket.disconnect(true); // Disconnect if no token
+    return;
+  }
+  jwt.verify(token, secrect, (err, user) => {
+    if (err) return false;
+    if (clients.find((m) => m.user.id === user.id)) {
+      clients.forEach((m, index) => {
+        if (m.user.id === user.id) {
+          clients[index] = { ...m, socket };
+        }
+      });
+    } 
+  });
+  console.log(`user connected : ${socket.id}`);
+  socket.on("token", (token) => {
     // console.log(`token value ${token}`)
-    if(!token)return false
-    jwt.verify(token,secrect,(err,user)=>{
-      if(err) return false
-      if(clients.find(m=>m.user.id===user.id)) return false
-      clients.push({user,socket})
-    })
-  })
+    if (!token) return false;
+    jwt.verify(token, secrect, (err, user) => {
+      if (err) return false;
+      if (clients.find((m) => m.user.id === user.id)) {
+        clients.forEach((m, index) => {
+          if (m.user.id === user.id) {
+            clients[index] = { ...m, socket };
+          }
+        });
+      } else clients.push({ user, socket });
+    });
+  });
   socket.on("disconnect", () => {
-    clients.filter(m=>m.socket.id!== socket.id)
+    clients.filter((m) => m.socket.id !== socket.id);
     console.log(`User disconnected: ${socket.id}`);
+  });
 });
-  
-})
 
 /***
  * middleware

@@ -116,6 +116,7 @@ model Chat {
   id       Int       @id @default(autoincrement())
   users    User[]    @relation("ChatUsers")
   massages Massage[]
+  lastReadMessageId Int?
   createAt DateTime  @default(now())
   updateAt DateTime  @updatedAt
 }
@@ -123,9 +124,9 @@ model Chat {
 model Massage {
   id         Int      @id @default(autoincrement())
   content    String
-  sender     User     @relation( fields: [senderId], references: [id])
+  sender     User     @relation( fields: [senderId], references: [id],onDelete: Cascade)
   senderId   Int
-  chat       Chat     @relation(fields: [chatId], references: [id])
+  chat       Chat     @relation(fields: [chatId], references: [id],onDelete: Cascade)
   chatId     Int
   createAt   DateTime @default(now())
   updateAt   DateTime @updatedAt
